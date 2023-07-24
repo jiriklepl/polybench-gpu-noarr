@@ -15,8 +15,8 @@ using num_t = DATA_TYPE;
 
 namespace {
 
-noarr::dim<__LINE__> i_guard;
-noarr::dim<__LINE__> j_guard;
+constexpr noarr::dim<__LINE__> i_guard;
+constexpr noarr::dim<__LINE__> j_guard;
 
 // initialize data
 void init(num_t& alpha, num_t& beta, auto C, auto A, auto B) {
@@ -49,7 +49,7 @@ void init(num_t& alpha, num_t& beta, auto C, auto A, auto B) {
 		});
 }
 
-__global__ void gemm_kernel(auto inner, num_t alpha, num_t beta, auto C, auto A, auto B) {
+__global__ void kernel_gemm(auto inner, num_t alpha, num_t beta, auto C, auto A, auto B) {
 	// C: i x j
 	// A: i x k
 	// B: k x j
@@ -66,14 +66,18 @@ __global__ void gemm_kernel(auto inner, num_t alpha, num_t beta, auto C, auto A,
 
 // run kernels
 void run_gemm(num_t alpha, num_t beta, auto C, auto A, auto B) {
-	
+	// C: i x j
+	// A: i x k
+	// B: k x j
+
 	auto trav = noarr::traverser(C, A, B)
-		.order(noarr::into_blocks_dynamic<'i', 'I', 'i', i_guard>(0))
-		.order(noarr::into_blocks_dynamic<'j', 'J', 'j', j_guard>(0));
+		.order(noarr::into_blocks_dynamic<'i', 'I', 'i', i_guard>(DIM_THREAD_BLOCK_X))
+		.order(noarr::into_blocks_dynamic<'j', 'J', 'j', j_guard>(DIM_THREAD_BLOCK_Y));
 
-	auto cutrav = noarr::cuda_threads<'I', 'i', 'J', 'j'>(trav);
-
-	cutrav.simple_run(gemm_kernel, 0, alpha, beta, C, A, B);
+	noarr::cuda_threads<'I', 'i', 'J', 'j'>(trav)
+		.simple_run(kernel_gemm, 0, alpha, beta, C, A, B);
+	CUCH(cudaGetLastError()); // check for configuration errors
+	CUCH(cudaDeviceSynchronize()); // join, check for execution errors
 }
 
 } // namespace
@@ -104,7 +108,7 @@ int main(int argc, char** argv) {
 
 	auto end = std::chrono::high_resolution_clock::now();
 
-	auto duration = std::chrono::duration<long double>(end - start);
+	auto duration = std::chrono::duration<double>(end - start);
 
 	// print results
 	if (argv[0] != ""s) {

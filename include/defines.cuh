@@ -31,14 +31,15 @@ public:
         CUCH(cudaMallocManaged(&_data, _layout | noarr::get_size()));
     }
 
-    ~managed_bag() {
+    ~managed_bag() noexcept {
         CUCH(cudaFree(_data));
+        _data = nullptr;
     }
 
     managed_bag(const managed_bag&) = delete;
     managed_bag& operator=(const managed_bag&) = delete;
 
-    auto get_ref() noexcept {
+    auto get_ref() const noexcept {
         return noarr::make_bag(_layout, _data);
     }
 
