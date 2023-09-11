@@ -15,20 +15,24 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 FetchContent_Declare(
   Noarr
   GIT_REPOSITORY https://github.com/jiriklepl/noarr-structures.git
-  GIT_TAG        constraints-WIP)
+  GIT_TAG        main)
 FetchContent_MakeAvailable(Noarr)
 
-add_executable(gemm CUDA/GEMM/gemm.cu)
-target_include_directories(gemm PRIVATE include)
-target_include_directories(gemm PRIVATE ${Noarr_SOURCE_DIR}/include)
-target_compile_options(gemm PRIVATE --expt-relaxed-constexpr)
+include_directories(gemm PRIVATE include)
+include_directories(gemm PRIVATE ${Noarr_SOURCE_DIR}/include)
 
-add_executable(jacobi1d CUDA/JACOBI1D/jacobi1d.cu)
-target_include_directories(jacobi1d PRIVATE include)
-target_include_directories(jacobi1d PRIVATE ${Noarr_SOURCE_DIR}/include)
-target_compile_options(jacobi1d PRIVATE --expt-relaxed-constexpr)
+add_library(gemm_kernel STATIC CUDA/GEMM/gemm.cu)
+target_compile_options(gemm_kernel PRIVATE --expt-relaxed-constexpr)
 
-add_executable(2DConvolution CUDA/2DCONV/2DConvolution.cu)
-target_include_directories(2DConvolution PRIVATE include)
-target_include_directories(2DConvolution PRIVATE ${Noarr_SOURCE_DIR}/include)
-target_compile_options(2DConvolution PRIVATE --expt-relaxed-constexpr)
+add_executable(gemm CPP/main.cpp)
+target_link_libraries(gemm gemm_kernel)
+
+# add_executable(jacobi1d CUDA/JACOBI1D/jacobi1d.cu)
+# target_include_directories(jacobi1d PRIVATE include)
+# target_include_directories(jacobi1d PRIVATE ${Noarr_SOURCE_DIR}/include)
+# target_compile_options(jacobi1d PRIVATE --expt-relaxed-constexpr)
+
+# add_executable(2DConvolution CUDA/2DCONV/2DConvolution.cu)
+# target_include_directories(2DConvolution PRIVATE include)
+# target_include_directories(2DConvolution PRIVATE ${Noarr_SOURCE_DIR}/include)
+# target_compile_options(2DConvolution PRIVATE --expt-relaxed-constexpr)

@@ -1,13 +1,13 @@
-#include <chrono>
-#include <iomanip>
 #include <iostream>
 
+#include <memory>
 #include <noarr/structures_extended.hpp>
 #include <noarr/structures/extra/traverser.hpp>
 #include <noarr/structures/interop/bag.hpp>
 #include <noarr/structures/interop/serialize_data.hpp>
 #include <noarr/structures/interop/cuda_traverser.cuh>
 
+#include "common.hpp"
 #include "defines.cuh"
 #include "gemm.cuh"
 
@@ -82,39 +82,50 @@ void run_gemm(num_t alpha, num_t beta, auto C, auto A, auto B) {
 
 } // namespace
 
-int main(int argc, char** argv) {
-	using namespace std::string_literals;
 
-	// problem size
-	std::size_t ni = NI;
-	std::size_t nj = NJ;
-	std::size_t nk = NK;
+class gemm_experiment : public virtual_experiment {
+	template<class A, class B, class C>
+	struct gemm_data : experiment_data {
+		gemm_data(num_t alpha, num_t beta, C c, A a, B b)
+			: alpha(alpha), beta(beta), c(std::move(c)), a(std::move(a)), b(std::move(b)) { }
 
-	// data
-	num_t alpha;
-	num_t beta;
+		num_t alpha;
+		num_t beta;
 
-	auto C = managed_bag(noarr::scalar<num_t>() ^ noarr::sized_vectors<'i', 'j'>(ni, nj));
-	auto A = managed_bag(noarr::scalar<num_t>() ^ noarr::sized_vectors<'i', 'k'>(ni, nk));
-	auto B = managed_bag(noarr::scalar<num_t>() ^ noarr::sized_vectors<'k', 'j'>(nk, nj));
+		C c;
+		A a;
+		B b;
 
-	// initialize data
-	init(alpha, beta, C.get_ref(), A.get_ref(), B.get_ref());
+		void run() override {
+			run_gemm(alpha, beta, c.get_ref(), a.get_ref(), b.get_ref());
+		}
 
-	auto start = std::chrono::high_resolution_clock::now();
+		void print_results(std::ostream& os) override {
+			noarr::serialize_data(os, c.get_ref() ^ noarr::hoist<'i'>());
+		}
+	};
 
-	// run kernels
-	run_gemm(alpha, beta, C.get_ref(), A.get_ref(), B.get_ref());
+public:
+	gemm_experiment() {
+		std::size_t ni = NI;
+		std::size_t nj = NJ;
+		std::size_t nk = NK;
 
-	auto end = std::chrono::high_resolution_clock::now();
+		gemm_data new_data{
+			(num_t)0,
+			(num_t)0,
+			managed_bag(noarr::scalar<num_t>() ^ noarr::sized_vectors<'i', 'j'>(ni, nj)),
+			managed_bag(noarr::scalar<num_t>() ^ noarr::sized_vectors<'i', 'k'>(ni, nk)),
+			managed_bag(noarr::scalar<num_t>() ^ noarr::sized_vectors<'k', 'j'>(nk, nj)),
+		};
 
-	auto duration = std::chrono::duration<double>(end - start);
+		// initialize data
+		init(new_data.alpha, new_data.beta, new_data.c.get_ref(), new_data.a.get_ref(), new_data.b.get_ref());
 
-	// print results
-	if (argv[0] != ""s) {
-		std::cout << std::fixed << std::setprecision(2);
-		noarr::serialize_data(std::cout, C.get_ref() ^ noarr::hoist<'i'>());
+		data = std::make_unique<decltype(new_data)>(std::move(new_data));
 	}
+};
 
-	std::cerr << duration.count() << std::endl;
+std::unique_ptr<virtual_experiment> make_experiment(int, char *[]) {
+	return std::make_unique<gemm_experiment>();
 }

@@ -27,6 +27,18 @@ class managed_bag {
 public:
     using value_type = noarr::scalar_t<Struct>;
 
+    managed_bag(managed_bag &&other) noexcept : _layout(other._layout), _data(other._data) {
+        other._data = nullptr;
+    }
+
+    managed_bag &operator=(managed_bag &&other) noexcept {
+        _layout = other._layout;
+        _data = other._data;
+
+        other._data = nullptr;
+        return *this;
+    }
+
     managed_bag(Struct layout) : _layout(layout), _data(nullptr) {
         CUCH(cudaMallocManaged(&_data, _layout | noarr::get_size()));
     }

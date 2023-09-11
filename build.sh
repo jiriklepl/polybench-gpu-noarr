@@ -7,6 +7,7 @@ cd build || exit 1
 # Configure the build
 cmake -DCMAKE_BUILD_TYPE=Release \
 	-DCMAKE_CUDA_FLAGS="-DMINI_DATASET -DDATA_TYPE_IS_FLOAT" \
+	-DCMAKE_CUDA_HOST_COMPILER=/usr/bin/clang++ \
 	.. \
 	|| exit 1
 
