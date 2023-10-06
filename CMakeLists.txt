@@ -4,22 +4,26 @@ Include(FetchContent)
 # set the project name
 project(
   NoarrPolybenchGPU VERSION 0.0.1
-  LANGUAGES CXX CUDA
+  LANGUAGES CXX
 )
 
 # specify the C++ standard
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -allow-unsupported-compiler")
+
+enable_language(CUDA)
+
 # download the Noarr Structures library
 FetchContent_Declare(
   Noarr
   GIT_REPOSITORY https://github.com/jiriklepl/noarr-structures.git
-  GIT_TAG        main)
+  GIT_TAG        multimerge)
 FetchContent_MakeAvailable(Noarr)
 
-include_directories(gemm PRIVATE include)
-include_directories(gemm PRIVATE ${Noarr_SOURCE_DIR}/include)
+include_directories(include)
+include_directories(${Noarr_SOURCE_DIR}/include)
 
 add_library(gemm_kernel STATIC CUDA/GEMM/gemm.cu)
 target_compile_options(gemm_kernel PRIVATE --expt-relaxed-constexpr)
