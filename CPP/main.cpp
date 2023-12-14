@@ -1,14 +1,24 @@
 #include <chrono>
 #include <iomanip>
 #include <iostream>
-#include <string>
+#include <memory>
 
 #include "common.hpp"
 
 int main(int argc, char** argv) {
 	using namespace std::string_literals;
 
-	auto experiment = make_experiment(argc, argv);
+	// parse arguments
+	if (argc < 2) {
+		std::cerr << "Usage: " << argv[0] << " <experiment> [args...]" << std::endl;
+
+		virtual_experiment::print_experiments(std::cerr);
+
+		return 1;
+	}
+
+	// create experiment
+	auto experiment = virtual_experiment::get_experiment(argv[1]);
 
 	auto start = std::chrono::high_resolution_clock::now();
 
@@ -25,5 +35,5 @@ int main(int argc, char** argv) {
 		experiment->print_results(std::cout);
 	}
 
-	std::cerr << duration.count() << std::endl;
+	std::cerr << duration << std::endl;
 }

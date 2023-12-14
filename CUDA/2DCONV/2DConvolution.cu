@@ -1,6 +1,4 @@
-#include <chrono>
-#include <iomanip>
-#include <iostream>
+#include <memory>
 
 #include <noarr/structures_extended.hpp>
 #include <noarr/structures/extra/traverser.hpp>
@@ -8,6 +6,7 @@
 #include <noarr/structures/interop/serialize_data.hpp>
 #include <noarr/structures/interop/cuda_traverser.cuh>
 
+#include "common.hpp"
 #include "defines.cuh"
 #include "2DConvolution.cuh"
 
@@ -15,20 +14,17 @@ using num_t = DATA_TYPE;
 
 namespace {
 
-constexpr noarr::dim<__LINE__> i_guard;
-constexpr noarr::dim<__LINE__> j_guard;
-
-
 // initialize data
 void init(auto A) {
 	// A: i x j
 
-	noarr::traverser(A).for_each([=](auto state) {
-		A[state] = (float)rand() / RAND_MAX;
+	noarr::traverser(A).order(noarr::hoist<'i'>()).for_each([=](auto state) {
+		A[state] = (float)rand() / (float)RAND_MAX;
 	});
 }
 
-__global__ void kernel_2dconv(auto inner, auto A, auto B) {
+template<class inner_t, class A_t, class B_t>
+__global__ void kernel_2dconv(inner_t inner, A_t A, B_t B) {
 	// A: i x j
 	// B: i x j
 	using noarr::neighbor;
@@ -39,8 +35,8 @@ __global__ void kernel_2dconv(auto inner, auto A, auto B) {
 	c12 = -0.3;  c22 = +0.6;  c32 = -0.9;
 	c13 = +0.4;  c23 = +0.7;  c33 = +0.10;
 
-	inner.template for_each<i_guard, j_guard>([=](auto state) {
-		B[state] = c11 * A[neighbor<'i', 'j'>(state, -1, 1)] +
+	inner.template for_each<'s', 't'>([=](auto state) {
+		B[state] = c11 * A[neighbor<'i', 'j'>(state, -1, -1)] +
 			c21 * A[neighbor<'i', 'j'>(state, -1, 0)] +
 			c31 * A[neighbor<'i', 'j'>(state, -1, +1)] +
 			c12 * A[neighbor<'i', 'j'>(state, 0, -1)] +
@@ -58,8 +54,9 @@ void run_2dconv(auto A, auto B) {
 	// B: i x j
 	auto trav = noarr::traverser(A, B)
 		.order(noarr::symmetric_spans<'i', 'j'>(A, 1, 1))
-		.order(noarr::into_blocks_dynamic<'i', 'I', 'i', i_guard>(DIM_THREAD_BLOCK_X))
-		.order(noarr::into_blocks_dynamic<'j', 'J', 'j', j_guard>(DIM_THREAD_BLOCK_Y));
+		.order(noarr::into_blocks_dynamic<'i', 'I', 'i', 's'>(DIM_THREAD_BLOCK_X))
+		.order(noarr::into_blocks_dynamic<'j', 'J', 'j', 't'>(DIM_THREAD_BLOCK_Y))
+		;
 
 	noarr::cuda_threads<'I', 'i', 'J', 'j'>(trav)
 		.simple_run(kernel_2dconv, 0, A, B);
@@ -68,35 +65,48 @@ void run_2dconv(auto A, auto B) {
 	CUCH(cudaDeviceSynchronize()); // join, check for execution errors
 }
 
+class experiment : public virtual_experiment {
+	template<class A, class B>
+	struct experiment_data : public virtual_data {
+		A a;
+		B b;
+
+		experiment_data(A a, B b)
+			: a(std::move(a)), b(std::move(b)) { }
+
+		void run() override {
+			run_2dconv(a.get_device_ref(), b.get_device_ref());
+		}
+
+		void print_results(std::ostream& os) override {
+			b.fetch_to_host();
+			noarr::serialize_data(os, b.get_host_ref() ^ noarr::hoist<'i'>());
+		}
+	};
+
+public:
+	experiment() {
+		// problem size
+		std::size_t ni = NI;
+		std::size_t nj = NJ;
+
+		cudaInit();
+
+		// data
+		experiment_data new_data{
+			managed_bag(noarr::scalar<num_t>() ^ noarr::sized_vectors<'i', 'j'>(ni, nj)),
+			managed_bag(noarr::scalar<num_t>() ^ noarr::sized_vectors<'i', 'j'>(ni, nj))
+		};
+
+		init(new_data.a.get_host_ref());
+
+		new_data.a.fetch_to_device();
+
+		data = std::make_unique<decltype(new_data)>(std::move(new_data));
+	}
+};
+
+
 } // namespace
 
-int main(int argc, char** argv) {
-	using namespace std::string_literals;
-
-	// problem size
-	std::size_t ni = NI;
-	std::size_t nj = NJ;
-
-	// data
-	auto A = managed_bag(noarr::scalar<num_t>() ^ noarr::sized_vectors<'i', 'j'>(ni, nj));
-	auto B = managed_bag(noarr::scalar<num_t>() ^ noarr::sized_vectors<'i', 'j'>(ni, nj));
-
-	init(A.get_ref());
-
-	auto start = std::chrono::high_resolution_clock::now();
-
-	// run kernels
-	run_2dconv(A.get_ref(), B.get_ref());
-
-	auto end = std::chrono::high_resolution_clock::now();
-
-	auto duration = std::chrono::duration<long double>(end - start);
-
-	// print results
-	if (argv[0] != ""s) {
-		std::cout << std::fixed << std::setprecision(2);
-		noarr::serialize_data(std::cout, A.get_ref() ^ noarr::hoist<'i'>());
-	}
-
-	std::cerr << duration.count() << std::endl;
-}
+REGISTER_EXPERIMENT(2DConvolution);

@@ -4,6 +4,7 @@ Include(FetchContent)
 # set the project name
 project(
   NoarrPolybenchGPU VERSION 0.0.1
+  DESCRIPTION "NoarrPolybenchGPU is a GPU implementation of the Polybench benchmark suite."
   LANGUAGES CXX
 )
 
@@ -11,7 +12,12 @@ project(
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -allow-unsupported-compiler")
+# set the CUDA standard
+set(CMAKE_CUDA_STANDARD 20)
+set(CMAKE_CUDA_STANDARD_REQUIRED True)
+
+# set the CUDA flags
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -allow-unsupported-compiler --expt-relaxed-constexpr")
 
 enable_language(CUDA)
 
@@ -19,24 +25,16 @@ enable_language(CUDA)
 FetchContent_Declare(
   Noarr
   GIT_REPOSITORY https://github.com/jiriklepl/noarr-structures.git
-  GIT_TAG        multimerge)
+  GIT_TAG        main)
 FetchContent_MakeAvailable(Noarr)
 
 include_directories(include)
 include_directories(${Noarr_SOURCE_DIR}/include)
 
-add_library(gemm_kernel STATIC CUDA/GEMM/gemm.cu)
-target_compile_options(gemm_kernel PRIVATE --expt-relaxed-constexpr)
-
-add_executable(gemm CPP/main.cpp)
-target_link_libraries(gemm gemm_kernel)
+add_executable(runner CPP/main.cpp CUDA/GEMM/gemm.cu CUDA/2DCONV/2DConvolution.cu)
 
 # add_executable(jacobi1d CUDA/JACOBI1D/jacobi1d.cu)
 # target_include_directories(jacobi1d PRIVATE include)
 # target_include_directories(jacobi1d PRIVATE ${Noarr_SOURCE_DIR}/include)
 # target_compile_options(jacobi1d PRIVATE --expt-relaxed-constexpr)
 
-# add_executable(2DConvolution CUDA/2DCONV/2DConvolution.cu)
-# target_include_directories(2DConvolution PRIVATE include)
-# target_include_directories(2DConvolution PRIVATE ${Noarr_SOURCE_DIR}/include)
-# target_compile_options(2DConvolution PRIVATE --expt-relaxed-constexpr)

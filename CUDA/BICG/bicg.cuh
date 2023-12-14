@@ -4,15 +4,23 @@
 #include "defines.cuh"
 
 #ifdef MINI_DATASET
-// # define ...
+# define NX 4096
+# define NY 4096
 #elif defined(SMALL_DATASET)
-// # define ...
+# define NX 4096
+# define NY 4096
 #elif defined(MEDIUM_DATASET)
-// # define ...
+# define NX 4096
+# define NY 4096
 #elif defined(LARGE_DATASET)
-// # define ...
+# define NX 4096
+# define NY 4096
 #elif defined(EXTRALARGE_DATASET)
-// # define ...
+# define NX 4096
+# define NY 4096
 #endif
+
+#define DIM_THREAD_BLOCK_X 256
+#define DIM_THREAD_BLOCK_Y 1
 
 #endif // _BICG_CUH

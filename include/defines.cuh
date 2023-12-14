@@ -1,6 +1,8 @@
 #ifndef DEFINES_HPP
 #define DEFINES_HPP
 
+#include <cassert>
+
 #define CUCH(status)  do { cudaError_t err = status; if (err != cudaSuccess) std::cerr << __FILE__ ":" << __LINE__ << ": error: " << cudaGetErrorString(err) << "\n\t" #status << std::endl, exit(err); } while (false)
 
 #if !defined(MINI_DATASET) && !defined(SMALL_DATASET) && !defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) && !defined(EXTRALARGE_DATASET)
@@ -22,42 +24,73 @@
 #include <noarr/structures_extended.hpp>
 #include <noarr/structures/interop/bag.hpp>
 
+inline void cudaInit() {
+    cudaDeviceProp prop;
+    CUCH(cudaGetDeviceProperties(&prop, 0));
+    std::cout << "Device name: " << prop.name << std::endl;
+
+	CUCH(cudaSetDevice(0));
+}
+
 template<class Struct>
 class managed_bag {
 public:
     using value_type = noarr::scalar_t<Struct>;
 
-    managed_bag(managed_bag &&other) noexcept : _layout(other._layout), _data(other._data) {
+    managed_bag(Struct layout) : _layout(layout), _data(nullptr), _data_device(nullptr) {
+        CUCH(cudaMallocHost(&_data, _layout | noarr::get_size()));
+        CUCH(cudaMalloc(&_data_device, _layout | noarr::get_size()));
+    }
+
+    managed_bag(const managed_bag &other) = delete;
+    managed_bag &operator=(const managed_bag &other) = delete;
+
+    managed_bag(managed_bag &&other) noexcept : _layout(other._layout), _data(other._data), _data_device(other._data_device) {
         other._data = nullptr;
+        other._data_device = nullptr;
     }
 
     managed_bag &operator=(managed_bag &&other) noexcept {
-        _layout = other._layout;
         _data = other._data;
-
+        _data_device = other._data_device;
         other._data = nullptr;
+        other._data_device = nullptr;
+
+        _layout = other._layout;
         return *this;
     }
 
-    managed_bag(Struct layout) : _layout(layout), _data(nullptr) {
-        CUCH(cudaMallocManaged(&_data, _layout | noarr::get_size()));
+    void fetch_to_device() noexcept {
+        assert(_data != nullptr);
+        assert(_data_device != nullptr);
+        CUCH(cudaMemcpy(_data_device, _data, _layout | noarr::get_size(), cudaMemcpyDefault));
+    }
+
+    void fetch_to_host() noexcept {
+        assert(_data != nullptr);
+        assert(_data_device != nullptr);
+        CUCH(cudaMemcpy(_data, _data_device, _layout | noarr::get_size(), cudaMemcpyDefault));
     }
 
     ~managed_bag() noexcept {
-        CUCH(cudaFree(_data));
+        CUCH(cudaFreeHost(_data));
         _data = nullptr;
+        CUCH(cudaFree(_data_device));
+        _data_device = nullptr;
     }
 
-    managed_bag(const managed_bag&) = delete;
-    managed_bag& operator=(const managed_bag&) = delete;
-
-    auto get_ref() const noexcept {
+    auto get_host_ref() const noexcept {
         return noarr::make_bag(_layout, _data);
+    }
+
+    auto get_device_ref() const noexcept {
+        return noarr::make_bag(_layout, _data_device);
     }
 
 private:
     Struct _layout;
     value_type* _data;
+    value_type* _data_device;
 };
 
 #endif // DEFINES_HPP
