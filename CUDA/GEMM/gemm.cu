@@ -67,8 +67,8 @@ void run_gemm(auto C, auto A, auto B) {
 	// A: i x k
 	// B: k x j
 	auto trav = noarr::traverser(C, A, B)
-		.order(noarr::into_blocks_dynamic<'i', 'I', 'i', 's'>(DIM_THREAD_BLOCK_X))
-		.order(noarr::into_blocks_dynamic<'j', 'J', 'j', 't'>(DIM_THREAD_BLOCK_Y));
+		.order(noarr::into_blocks_dynamic<'i', 'I', 'i', 's'>(DIM_THREAD_BLOCK_Y))
+		.order(noarr::into_blocks_dynamic<'j', 'J', 'j', 't'>(DIM_THREAD_BLOCK_X));
 
 	noarr::cuda_threads<'I', 'i', 'J', 'j'>(trav)
 		.simple_run(kernel_gemm, 0, C, A, B);
@@ -106,9 +106,9 @@ public:
 		cudaInit();
 
 		experiment_data new_data{
-			managed_bag(noarr::scalar<num_t>() ^ noarr::sized_vectors<'i', 'j'>(ni, nj)),
-			managed_bag(noarr::scalar<num_t>() ^ noarr::sized_vectors<'i', 'k'>(ni, nk)),
-			managed_bag(noarr::scalar<num_t>() ^ noarr::sized_vectors<'k', 'j'>(nk, nj)),
+			managed_bag(noarr::scalar<num_t>() ^ noarr::sized_vectors<'j', 'i'>(nj, ni)),
+			managed_bag(noarr::scalar<num_t>() ^ noarr::sized_vectors<'k', 'i'>(nk, ni)),
+			managed_bag(noarr::scalar<num_t>() ^ noarr::sized_vectors<'j', 'k'>(nj, nk)),
 		};
 
 		// initialize data

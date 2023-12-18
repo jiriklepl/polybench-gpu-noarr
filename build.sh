@@ -9,7 +9,7 @@ cd build
 
 # Configure the build
 cmake -DCMAKE_BUILD_TYPE=Release \
-	-DCMAKE_CUDA_FLAGS="-DMINI_DATASET -DDATA_TYPE_IS_FLOAT -O3" \
+	-DCMAKE_CUDA_FLAGS="-DMEDIUM_DATASET -DDATA_TYPE_IS_FLOAT -O3" \
 	-DCMAKE_CUDA_HOST_COMPILER=/usr/bin/clang++-14 \
 	..
 

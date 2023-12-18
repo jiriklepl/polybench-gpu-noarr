@@ -31,7 +31,14 @@ FetchContent_MakeAvailable(Noarr)
 include_directories(include)
 include_directories(${Noarr_SOURCE_DIR}/include)
 
-add_executable(runner CPP/main.cpp CUDA/GEMM/gemm.cu CUDA/2DCONV/2DConvolution.cu)
+add_executable(runner
+  CPP/main.cpp
+  CUDA/GEMM/gemm.cu
+  CUDA/2DCONV/2DConvolution.cu
+  CUDA/2MM/2mm.cu
+  CUDA/JACOBI2D/jacobi2d.cu
+  CUDA/GRAMSCHM/gramschmidt.cu
+)
 
 # add_executable(jacobi1d CUDA/JACOBI1D/jacobi1d.cu)
 # target_include_directories(jacobi1d PRIVATE include)
