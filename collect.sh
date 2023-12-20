@@ -28,6 +28,7 @@ mkdir -p "$DATA_DIR"
 compare_algorithms() {
     echo "collecting $1"
     ( srun -A kdss -p gpu-short --exclusive -wampere01 --gres=gpu ./run_noarr_algorithm.sh "Noarr" "$1" & wait ) > "$DATA_DIR/$1.log"
+	echo "" >> "$DATA_DIR/$1.log"
     ( srun -A kdss -p gpu-short --exclusive -wampere01 --gres=gpu ./run_baseline_algorithm.sh "Baseline" "$2" & wait ) >> "$DATA_DIR/$1.log"
     echo "done"
 }
