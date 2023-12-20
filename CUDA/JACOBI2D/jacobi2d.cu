@@ -1,3 +1,4 @@
+#include <cuda_runtime_api.h>
 #include <memory>
 
 #include <noarr/structures_extended.hpp>
@@ -70,8 +71,14 @@ void run_jacobi2d(std::size_t tsteps, auto A, auto B) {
 		noarr::cuda_threads<'J', 'j', 'I', 'i'>(inner)
 			.simple_run(jacobi2d_kernel1, 0, A, B);
 
+		CUCH(cudaGetLastError());
+		CUCH(cudaDeviceSynchronize());
+
 		noarr::cuda_threads<'J', 'j', 'I', 'i'>(inner)
 			.simple_run(jacobi2d_kernel2, 0, A, B);
+
+		CUCH(cudaGetLastError());
+		CUCH(cudaDeviceSynchronize());
 	});
 }
 

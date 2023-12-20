@@ -14,10 +14,10 @@
 # define NK 2048
 # define NL 2048
 #elif defined(MEDIUM_DATASET)
-# define NI 10000
-# define NJ 12000
-# define NK 13000
-# define NL 16000
+# define NI 5000
+# define NJ 5200
+# define NK 5300
+# define NL 5600
 #elif defined(LARGE_DATASET)
 # define NI 2048
 # define NJ 2048

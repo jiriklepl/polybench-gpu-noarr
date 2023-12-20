@@ -2,6 +2,7 @@
 #define DEFINES_HPP
 
 #include <cassert>
+#include <memory>
 
 #define CUCH(status)  do { cudaError_t err = status; if (err != cudaSuccess) std::cerr << __FILE__ ":" << __LINE__ << ": error: " << cudaGetErrorString(err) << "\n\t" #status << std::endl, exit(err); } while (false)
 
@@ -38,21 +39,21 @@ public:
     using value_type = noarr::scalar_t<Struct>;
 
     managed_bag(Struct layout) : _layout(layout), _data(nullptr), _data_device(nullptr) {
-        CUCH(cudaMallocHost(&_data, _layout | noarr::get_size()));
+        _data = std::make_unique<value_type[]>((_layout | noarr::get_size()) / sizeof(value_type));
         CUCH(cudaMalloc(&_data_device, _layout | noarr::get_size()));
     }
 
     managed_bag(const managed_bag &other) = delete;
     managed_bag &operator=(const managed_bag &other) = delete;
 
-    managed_bag(managed_bag &&other) noexcept : _layout(other._layout), _data(other._data), _data_device(other._data_device) {
+    managed_bag(managed_bag &&other) noexcept : _layout(other._layout), _data(std::move(other._data)), _data_device(std::move(other._data_device)) {
         other._data = nullptr;
         other._data_device = nullptr;
     }
 
     managed_bag &operator=(managed_bag &&other) noexcept {
-        _data = other._data;
-        _data_device = other._data_device;
+        _data = std::move(other._data);
+        _data_device = std::move(other._data_device);
         other._data = nullptr;
         other._data_device = nullptr;
 
@@ -63,24 +64,22 @@ public:
     void fetch_to_device() noexcept {
         assert(_data != nullptr);
         assert(_data_device != nullptr);
-        CUCH(cudaMemcpy(_data_device, _data, _layout | noarr::get_size(), cudaMemcpyDefault));
+        CUCH(cudaMemcpy(_data_device, _data.get(), _layout | noarr::get_size(), cudaMemcpyDefault));
     }
 
     void fetch_to_host() noexcept {
         assert(_data != nullptr);
         assert(_data_device != nullptr);
-        CUCH(cudaMemcpy(_data, _data_device, _layout | noarr::get_size(), cudaMemcpyDefault));
+        CUCH(cudaMemcpy(_data.get(), _data_device, _layout | noarr::get_size(), cudaMemcpyDefault));
     }
 
     ~managed_bag() noexcept {
-        CUCH(cudaFreeHost(_data));
-        _data = nullptr;
         CUCH(cudaFree(_data_device));
         _data_device = nullptr;
     }
 
     auto get_host_ref() const noexcept {
-        return noarr::make_bag(_layout, _data);
+        return noarr::make_bag(_layout, _data.get());
     }
 
     auto get_device_ref() const noexcept {
@@ -89,7 +88,7 @@ public:
 
 private:
     Struct _layout;
-    value_type* _data;
+    std::unique_ptr<value_type[]> _data;
     value_type* _data_device;
 };
 

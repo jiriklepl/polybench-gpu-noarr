@@ -1,3 +1,4 @@
+#include <cuda_runtime_api.h>
 #include <memory>
 
 #include <noarr/structures_extended.hpp>
@@ -109,7 +110,7 @@ void run_gramschmidt(auto A, auto R, auto Q) {
 	trav.template for_dims<'k'>([=](auto inner) {
 		auto trav1 = inner
 			.order(noarr::span<'j'>(0, 1))
-			.order(noarr::into_blocks_dynamic<'j', 'J', 'j', 't'>(1));
+			.order(noarr::into_blocks_dynamic<'j', 'J', 'j', 't'>(DIM_THREAD_BLOCK_X));
 	
 		auto trav2 = inner
 			.order(noarr::into_blocks_dynamic<'i', 'I', 'i', 's'>(DIM_THREAD_BLOCK_X));
@@ -122,11 +123,20 @@ void run_gramschmidt(auto A, auto R, auto Q) {
 		noarr::cuda_threads<'J', 'j'>(trav1)
 			.simple_run(gramschmidt_kernel1, 0, A, R_diag, Q);
 
+		CUCH(cudaGetLastError());
+		CUCH(cudaDeviceSynchronize());
+
 		noarr::cuda_threads<'I', 'i'>(trav2)
 			.simple_run(gramschmidt_kernel2, 0, A, R_diag, Q);
+		
+		CUCH(cudaGetLastError());
+		CUCH(cudaDeviceSynchronize());
 
 		noarr::cuda_threads<'J', 'j'>(trav3)
 			.simple_run(gramschmidt_kernel3, 0, A_ij, R, Q);
+		
+		CUCH(cudaGetLastError());
+		CUCH(cudaDeviceSynchronize());
 	});
 }
 

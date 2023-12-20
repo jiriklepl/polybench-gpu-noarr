@@ -18,10 +18,13 @@ constexpr num_t ALPHA = 32412.0f;
 constexpr num_t BETA = 2123.0f;
 
 // initialize data
-void init(auto C, auto A, auto B) {
+void init(num_t &alpha, num_t &beta, auto C, auto A, auto B) {
 	// C: i x j
 	// A: i x k
 	// B: k x j
+
+	alpha = ALPHA;
+	beta = BETA;
 
 	noarr::traverser(A)
 		.for_each([=](auto state) {
@@ -46,23 +49,23 @@ void init(auto C, auto A, auto B) {
 }
 
 template<class inner_t, class C_t, class A_t, class B_t>
-__global__ void kernel_gemm(inner_t inner, C_t C, A_t A, B_t B) {
+__global__ void kernel_gemm(inner_t inner, num_t alpha, num_t beta, C_t C, A_t A, B_t B) {
 	// C: i x j
 	// A: i x k
 	// B: k x j
 
 	inner.template for_dims<'s', 't'>([=](auto inner) {
 		auto state = inner.state();
-		C[state] *= BETA;
+		C[state] *= beta;
 
 		inner.template for_each<'k'>([=](auto state) {
-			C[state] += ALPHA * A[state] * B[state];
+			C[state] += alpha * A[state] * B[state];
 		});
 	});
 }
 
 // run kernels
-void run_gemm(auto C, auto A, auto B) {
+void run_gemm(num_t alpha, num_t beta, auto C, auto A, auto B) {
 	// C: i x j
 	// A: i x k
 	// B: k x j
@@ -70,8 +73,8 @@ void run_gemm(auto C, auto A, auto B) {
 		.order(noarr::into_blocks_dynamic<'i', 'I', 'i', 's'>(DIM_THREAD_BLOCK_Y))
 		.order(noarr::into_blocks_dynamic<'j', 'J', 'j', 't'>(DIM_THREAD_BLOCK_X));
 
-	noarr::cuda_threads<'I', 'i', 'J', 'j'>(trav)
-		.simple_run(kernel_gemm, 0, C, A, B);
+	noarr::cuda_threads<'J', 'j', 'I', 'i'>(trav)
+		.simple_run(kernel_gemm, 0, alpha, beta, C, A, B);
 
 	CUCH(cudaGetLastError()); // check for configuration errors
 	CUCH(cudaDeviceSynchronize()); // join, check for execution errors
@@ -83,12 +86,14 @@ class experiment : public virtual_experiment {
 		C c;
 		A a;
 		B b;
+		num_t alpha = 0;
+		num_t beta = 0;
 
 		experiment_data(C c, A a, B b)
 			: c(std::move(c)), a(std::move(a)), b(std::move(b)) { }
 
 		void run() override {
-			run_gemm(c.get_device_ref(), a.get_device_ref(), b.get_device_ref());
+			run_gemm(alpha, beta, c.get_device_ref(), a.get_device_ref(), b.get_device_ref());
 		}
 
 		void print_results(std::ostream& os) override {
@@ -112,7 +117,7 @@ public:
 		};
 
 		// initialize data
-		init(new_data.c.get_host_ref(), new_data.a.get_host_ref(), new_data.b.get_host_ref());
+		init(new_data.alpha, new_data.beta, new_data.c.get_host_ref(), new_data.a.get_host_ref(), new_data.b.get_host_ref());
 
 		new_data.a.fetch_to_device();
 		new_data.b.fetch_to_device();

@@ -29,11 +29,11 @@ int main(int argc, char** argv) {
 
 	auto duration = std::chrono::duration<double>(end - start);
 
+	std::cerr << duration.count() << std::endl;
+
 	// print results
 	if (argv[0] != ""s) {
         std::cout << std::fixed << std::setprecision(2);
 		experiment->print_results(std::cout);
 	}
-
-	std::cerr << duration << std::endl;
 }
