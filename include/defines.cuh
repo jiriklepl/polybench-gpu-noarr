@@ -7,7 +7,7 @@
 
 #if !defined(MINI_DATASET) && !defined(SMALL_DATASET) && !defined(MEDIUM_DATASET) && !defined(LARGE_DATASET) && !defined(EXTRALARGE_DATASET)
 # error "Please define one of MINI_DATASET, SMALL_DATASET, MEDIUM_DATASET, LARGE_DATASET, EXTRALARGE_DATASET"
-# define MINI_DATASET
+# define MEDIUM_DATASET
 #endif
 
 #if !defined(DATA_TYPE_IS_INT) && !defined(DATA_TYPE_IS_FLOAT) && !defined(DATA_TYPE_IS_DOUBLE)
@@ -27,7 +27,7 @@
 inline void cudaInit() {
     cudaDeviceProp prop;
     CUCH(cudaGetDeviceProperties(&prop, 0));
-    std::cout << "Device name: " << prop.name << std::endl;
+    std::cerr << "Device name: " << prop.name << std::endl;
 
 	CUCH(cudaSetDevice(0));
 }
