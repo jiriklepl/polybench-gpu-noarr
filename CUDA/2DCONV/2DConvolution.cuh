@@ -10,8 +10,8 @@
 # define NI 4096
 # define NJ 4096
 #elif defined(MEDIUM_DATASET)
-# define NI 4096
-# define NJ 4096
+# define NI 40000
+# define NJ 43000
 #elif defined(LARGE_DATASET)
 # define NI 4096
 # define NJ 4096

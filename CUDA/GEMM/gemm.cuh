@@ -12,9 +12,9 @@
 # define NJ 512
 # define NK 512
 #elif defined(MEDIUM_DATASET)
-# define NI 512
-# define NJ 512
-# define NK 512
+# define NI 5000
+# define NJ 5300
+# define NK 5600
 #elif defined(LARGE_DATASET)
 # define NI 512
 # define NJ 512

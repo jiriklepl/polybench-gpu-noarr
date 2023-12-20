@@ -10,8 +10,8 @@
 # define TSTEPS 20
 # define N 1000
 #elif defined(MEDIUM_DATASET)
-# define TSTEPS 20
-# define N 1000
+# define TSTEPS 100
+# define N 10000
 #elif defined(LARGE_DATASET)
 # define TSTEPS 20
 # define N 1000

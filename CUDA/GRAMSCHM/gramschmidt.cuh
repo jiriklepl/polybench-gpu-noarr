@@ -10,8 +10,8 @@
 # define NI 2048
 # define NJ 2048
 #elif defined(MEDIUM_DATASET)
-# define NI 2048
-# define NJ 2048
+# define NI 20000
+# define NJ 23000
 #elif defined(LARGE_DATASET)
 # define NI 2048
 # define NJ 2048
