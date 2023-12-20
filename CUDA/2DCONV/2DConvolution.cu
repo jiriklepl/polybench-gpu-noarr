@@ -36,6 +36,11 @@ __global__ void kernel_2dconv(inner_t inner, A_t A, B_t B) {
 	c13 = +0.4;  c23 = +0.7;  c33 = +0.10;
 
 	inner.template for_each<'s', 't'>([=](auto state) {
+		auto [i, j] = noarr::get_indices<'i', 'j'>(state);
+
+		if (i == 0 || j == 0)
+			return;
+
 		B[state] = c11 * A[neighbor<'i', 'j'>(state, -1, -1)] +
 			c21 * A[neighbor<'i', 'j'>(state, -1, 0)] +
 			c31 * A[neighbor<'i', 'j'>(state, -1, +1)] +
@@ -53,12 +58,13 @@ void run_2dconv(auto A, auto B) {
 	// A: i x j
 	// B: i x j
 	auto trav = noarr::traverser(A, B)
-		.order(noarr::symmetric_spans<'i', 'j'>(A, 1, 1))
-		.order(noarr::into_blocks_dynamic<'i', 'I', 'i', 's'>(DIM_THREAD_BLOCK_X))
-		.order(noarr::into_blocks_dynamic<'j', 'J', 'j', 't'>(DIM_THREAD_BLOCK_Y))
+		.order(noarr::span<'i'>(0, (A | noarr::get_length<'i'>()) - 1))
+		.order(noarr::span<'j'>(0, (A | noarr::get_length<'j'>()) - 1))
+		.order(noarr::into_blocks_dynamic<'i', 'I', 'i', 's'>(DIM_THREAD_BLOCK_Y))
+		.order(noarr::into_blocks_dynamic<'j', 'J', 'j', 't'>(DIM_THREAD_BLOCK_X))
 		;
 
-	noarr::cuda_threads<'I', 'i', 'J', 'j'>(trav)
+	noarr::cuda_threads<'J', 'j', 'I', 'i'>(trav)
 		.simple_run(kernel_2dconv, 0, A, B);
 
 	CUCH(cudaGetLastError()); // check for configuration errors
