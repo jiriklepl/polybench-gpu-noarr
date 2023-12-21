@@ -126,19 +126,19 @@ void run_gramschmidt(auto A, auto R, auto Q) {
 
 		auto R_diag = R ^ noarr::fix<'j'>(noarr::get_index<'k'>(inner.state()));
 
-		noarr::cuda_threads<'J', 'j'>(trav1)
+		noarr::cuda_threads<'J', 'j', 'Y', 'y'>(trav1)
 			.simple_run(gramschmidt_kernel1, 0, A, R_diag, Q);
 
 		CUCH(cudaGetLastError());
 		CUCH(cudaDeviceSynchronize());
 
-		noarr::cuda_threads<'I', 'i'>(trav2)
+		noarr::cuda_threads<'I', 'i', 'Y', 'y'>(trav2)
 			.simple_run(gramschmidt_kernel2, 0, A, R_diag, Q);
 		
 		CUCH(cudaGetLastError());
 		CUCH(cudaDeviceSynchronize());
 
-		noarr::cuda_threads<'J', 'j'>(trav3)
+		noarr::cuda_threads<'J', 'j', 'Y', 'y'>(trav3)
 			.simple_run(gramschmidt_kernel3, 0, A_ij, R, Q);
 		
 		CUCH(cudaGetLastError());
