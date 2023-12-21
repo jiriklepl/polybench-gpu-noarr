@@ -33,7 +33,7 @@ compare_algorithms() {
 	"$2" >/dev/null 2>&1
     "$2" 2>"$tmpdir/baseline.log" | grep -oE "[0-9]+\.[0-9]{2,}" >&2
 
-	paste <(grep -oE '[0-9]+\.[0-9]+' "$tmpdir/baseline.log") <(grep -oE '[0-9]+(\.[0-9]+)?' "$tmpdir/noarr.log") |
+	paste <(grep -oE '[0-9]+\.[0-9]+|nan' "$tmpdir/baseline.log") <(grep -oE '[0-9]+(\.[0-9]+)?|nan' "$tmpdir/noarr.log") |
 	awk "BEGIN {
 		different = 0
 		n = 0
