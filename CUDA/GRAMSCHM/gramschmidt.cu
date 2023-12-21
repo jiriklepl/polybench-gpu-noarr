@@ -109,14 +109,20 @@ void run_gramschmidt(auto A, auto R, auto Q) {
 
 	trav.template for_dims<'k'>([=](auto inner) {
 		auto trav1 = inner
-			.order(noarr::span<'j'>(0, 1))
-			.order(noarr::into_blocks_dynamic<'j', 'J', 'j', 't'>(DIM_THREAD_BLOCK_X));
+			.order(noarr::span<'j'>(0, DIM_THREAD_BLOCK_X))
+			.order(noarr::into_blocks_dynamic<'j', 'J', 'j', 't'>(DIM_THREAD_BLOCK_X))
+			.order(noarr::bcast<'Y'>(1) ^ noarr::bcast<'y'>(DIM_THREAD_BLOCK_Y))
+			;
 	
 		auto trav2 = inner
-			.order(noarr::into_blocks_dynamic<'i', 'I', 'i', 's'>(DIM_THREAD_BLOCK_X));
+			.order(noarr::into_blocks_dynamic<'i', 'I', 'i', 's'>(DIM_THREAD_BLOCK_X))
+			.order(noarr::bcast<'Y'>(1) ^ noarr::bcast<'y'>(DIM_THREAD_BLOCK_Y))
+			;
 
 		auto trav3 = inner
-			.order(noarr::into_blocks_dynamic<'j', 'J', 'j', 't'>(DIM_THREAD_BLOCK_X));
+			.order(noarr::into_blocks_dynamic<'j', 'J', 'j', 't'>(DIM_THREAD_BLOCK_X))
+			.order(noarr::bcast<'Y'>(1) ^ noarr::bcast<'y'>(DIM_THREAD_BLOCK_Y))
+			;
 
 		auto R_diag = R ^ noarr::fix<'j'>(noarr::get_index<'k'>(inner.state()));
 
